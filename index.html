@@ -4,62 +4,29 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>GameLore AI</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
-  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #0A0C16; color: #E8ECFB; height: 100vh; overflow: hidden; position: relative; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0A0C16; color: #E8ECFB;
+    display: flex; flex-direction: column; height: 100vh; overflow: hidden; position: relative;
+  }
   .grid-bg { position: fixed; inset: 0; opacity: 0.06; z-index: 0; background-image: linear-gradient(#00F0FF 1px, transparent 1px), linear-gradient(90deg, #00F0FF 1px, transparent 1px); background-size: 42px 42px; pointer-events: none; }
   .glow-bg { position: fixed; top: -200px; left: 50%; transform: translateX(-50%); width: 700px; height: 700px; border-radius: 50%; opacity: 0.18; filter: blur(80px); z-index: 0; background: radial-gradient(circle, #6C3CFF 0%, transparent 70%); pointer-events: none; }
-  #authScreen { position: relative; z-index: 10; height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .auth-box { width: 100%; max-width: 360px; background: #131829; border: 1px solid #1B2136; border-radius: 20px; padding: 28px; text-align: center; }
-  .auth-logo { width: 48px; height: 48px; border-radius: 14px; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; background: linear-gradient(135deg, #00F0FF, #6C3CFF); box-shadow: 0 0 20px rgba(0,240,255,0.35); }
-  .auth-box h1 { font-size: 18px; margin-bottom: 4px; }
-  .auth-box h1 span { color: #00F0FF; }
-  .auth-box p.sub { color: #7C87B8; font-size: 13px; margin-bottom: 20px; }
-  .auth-box input { width: 100%; background: #0A0C16; border: 1px solid #262D47; border-radius: 10px; padding: 11px 14px; color: #E8ECFB; font-size: 14px; margin-bottom: 10px; outline: none; }
-  .auth-box input:focus { border-color: #00F0FF; }
-  .auth-box button.primary { width: 100%; padding: 11px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; background: linear-gradient(135deg, #00F0FF, #6C3CFF); color: #0A0C16; cursor: pointer; margin-top: 4px; }
-  .auth-box button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
-  .auth-toggle { margin-top: 16px; font-size: 13px; color: #7C87B8; }
-  .auth-toggle a { color: #00F0FF; cursor: pointer; text-decoration: none; }
-  .auth-msg { font-size: 12.5px; margin-top: 10px; min-height: 16px; }
-  .auth-msg.error { color: #FF6B8A; }
-  .auth-msg.ok { color: #4FE0C0; }
-  #appScreen { display: none; position: relative; z-index: 10; height: 100vh; }
-  .layout { display: flex; height: 100%; }
-  .sidebar { width: 270px; flex-shrink: 0; background: #0D1020; border-right: 1px solid #1B2136; display: flex; flex-direction: column; transition: margin-left 0.2s ease; }
-  .sidebar.hidden { margin-left: -270px; }
-  .sidebar-top { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-  .brand { display: flex; align-items: center; gap: 10px; padding: 4px 4px 8px; }
-  .brand .logo { width: 32px; height: 32px; border-radius: 9px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #00F0FF, #6C3CFF); font-size: 16px; flex-shrink: 0; }
-  .brand h2 { font-size: 14px; font-weight: 600; }
-  .brand h2 span { color: #00F0FF; }
-  .new-chat-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 10px; border: 1px solid #262D47; background: #131829; color: #E8ECFB; font-size: 13px; cursor: pointer; }
-  .new-chat-btn:hover { border-color: #00F0FF; }
-  .search-wrap input { width: 100%; background: #131829; border: 1px solid #262D47; border-radius: 10px; padding: 9px 12px; color: #E8ECFB; font-size: 13px; outline: none; }
-  .search-wrap input:focus { border-color: #00F0FF; }
-  .conv-list { flex: 1; overflow-y: auto; padding: 6px 10px; display: flex; flex-direction: column; gap: 3px; }
-  .conv-item { padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; color: #C7CEEE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .conv-item:hover { background: #131829; }
-  .conv-item.active { background: #1B2136; color: #fff; }
-  .conv-empty { padding: 20px 12px; color: #545C7E; font-size: 12.5px; text-align: center; }
-  .sidebar-bottom { padding: 12px; border-top: 1px solid #1B2136; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .user-email { font-size: 12px; color: #7C87B8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .logout-btn { background: none; border: none; color: #FF6B8A; font-size: 12px; cursor: pointer; flex-shrink: 0; }
-  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-  header { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-bottom: 1px solid #1B2136; }
-  .menu-btn { background: none; border: none; color: #C7CEEE; font-size: 18px; cursor: pointer; padding: 4px; display: none; }
-  header .htitle p { font-size: 12px; color: #7C87B8; margin-top: 2px; }
-  header .htitle h1 { font-size: 15px; font-weight: 600; }
-  .chat-area { flex: 1; overflow-y: auto; padding: 24px 16px; }
+  header { position: relative; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #1B2136; }
+  .logo { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: linear-gradient(135deg, #00F0FF, #6C3CFF); box-shadow: 0 0 20px rgba(0,240,255,0.35); font-size: 20px; }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+  header h1 span { color: #00F0FF; }
+  header p { font-size: 12px; color: #7C87B8; margin-top: 2px; }
+  .chat-area { position: relative; z-index: 10; flex: 1; overflow-y: auto; padding: 24px 16px; }
   .empty-state { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; padding: 0 16px; text-align: center; }
   .empty-state .sparkle { font-size: 30px; color: #00F0FF; }
   .empty-state h2 { font-size: 18px; font-weight: 500; }
   .empty-state h2 small { display: block; color: #7C87B8; font-weight: 400; font-size: 13px; margin-top: 6px; }
   .suggestions { display: grid; gap: 10px; width: 100%; max-width: 440px; }
-  .suggestion { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 16px; border-radius: 16px; font-size: 14px; background: #131829; border: 1px solid #1B2136; color: #C7CEEE; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; }
-  .suggestion:hover { transform: scale(1.01); border-color: #FF3EA5; }
+  .suggestion { display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 16px; border-radius: 16px; font-size: 14px; background: #131829; border: 1px solid #1B2136; color: #C7CEEE; cursor: pointer; }
+  .suggestion:hover { border-color: #FF3EA5; }
   .suggestion .icon { color: #FF3EA5; flex-shrink: 0; }
   .messages { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
   .msg-row { display: flex; }
@@ -71,269 +38,103 @@
   .thinking { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 18px; font-size: 14px; background: #131829; border: 1px solid #1B2136; color: #7C87B8; width: fit-content; }
   .spinner { width: 13px; height: 13px; border: 2px solid #262D47; border-top-color: #00F0FF; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .input-bar { padding: 10px 16px 20px; }
+  .input-bar { position: relative; z-index: 10; padding: 10px 16px 20px; }
   .input-wrap { max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 8px; background: #131829; border: 1px solid #262D47; border-radius: 999px; padding: 6px 6px 6px 18px; }
   .input-wrap input { flex: 1; background: transparent; border: none; outline: none; color: #E8ECFB; font-size: 14px; }
   .input-wrap input::placeholder { color: #545C7E; }
-  .send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #00F0FF, #6C3CFF); cursor: pointer; flex-shrink: 0; transition: opacity 0.15s ease; font-size: 16px; }
+  .send-btn { width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #00F0FF, #6C3CFF); cursor: pointer; flex-shrink: 0; font-size: 16px; }
   .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
   ::-webkit-scrollbar { width: 8px; }
   ::-webkit-scrollbar-thumb { background: #1B2136; border-radius: 8px; }
-  @media (max-width: 760px) { .menu-btn { display: block; } .sidebar { position: fixed; top: 0; left: 0; bottom: 0; z-index: 30; margin-left: -270px; } .sidebar.open { margin-left: 0; box-shadow: 0 0 40px rgba(0,0,0,0.5); } }
 </style>
 </head>
 <body>
 <div class="grid-bg"></div>
 <div class="glow-bg"></div>
-<div id="authScreen">
-  <div class="auth-box">
-    <div class="auth-logo">🎮</div>
+<header>
+  <div class="logo">🎮</div>
+  <div>
     <h1>GameLore <span>AI</span></h1>
-    <p class="sub" id="authSub">เข้าสู่ระบบเพื่อเริ่มคุยและเก็บประวัติแชท</p>
-    <input id="authEmail" type="email" placeholder="อีเมล" />
-    <input id="authPassword" type="password" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" />
-    <button class="primary" id="authSubmitBtn">เข้าสู่ระบบ</button>
-    <div class="auth-msg" id="authMsg"></div>
-    <div class="auth-toggle" id="authToggle">ยังไม่มีบัญชี? <a id="switchToSignup">สมัครสมาชิก</a></div>
+    <p>ผู้เชี่ยวชาญเกมทุกแนว รวมเกมอินดี้ที่หาข้อมูลยาก</p>
   </div>
+</header>
+<div class="chat-area" id="chatArea">
+  <div class="empty-state" id="emptyState">
+    <div class="sparkle">✦</div>
+    <h2>ถามอะไรก็ได้เกี่ยวกับเกม<small>โดยเฉพาะเกมที่คนอื่นไม่ค่อยพูดถึง</small></h2>
+    <div class="suggestions">
+      <div class="suggestion" data-text="แนะนำเกมมือถือแนวเดียวกับ Free Fire ที่คนไม่ค่อยรู้จัก"><span class="icon">🧭</span> แนะนำเกมมือถือแนวเดียวกับ Free Fire ที่คนไม่ค่อยรู้จัก</div>
+      <div class="suggestion" data-text="ระบบต่อสู้ของเกม Wuthering Waves เป็นยังไง"><span class="icon">⚔️</span> ระบบต่อสู้ของเกม Wuthering Waves เป็นยังไง</div>
+      <div class="suggestion" data-text="เกมอินดี้ปี 2026 ตัวไหนน่าเล่นที่สุด"><span class="icon">🏆</span> เกมอินดี้ปี 2026 ตัวไหนน่าเล่นที่สุด</div>
+    </div>
+  </div>
+  <div class="messages" id="messages" style="display:none;"></div>
 </div>
-<div id="appScreen">
-  <div class="layout">
-    <div class="sidebar" id="sidebar">
-      <div class="sidebar-top">
-        <div class="brand"><div class="logo">🎮</div><h2>GameLore <span>AI</span></h2></div>
-        <button class="new-chat-btn" id="newChatBtn">+ แชทใหม่</button>
-        <div class="search-wrap"><input id="searchInput" type="text" placeholder="ค้นหาประวัติแชท..." /></div>
-      </div>
-      <div class="conv-list" id="convList"><div class="conv-empty">ยังไม่มีประวัติแชท</div></div>
-      <div class="sidebar-bottom">
-        <span class="user-email" id="userEmail"></span>
-        <button class="logout-btn" id="logoutBtn">ออกจากระบบ</button>
-      </div>
-    </div>
-    <div class="main">
-      <header>
-        <button class="menu-btn" id="menuBtn">☰</button>
-        <div class="htitle"><h1>GameLore AI</h1><p>ผู้เชี่ยวชาญเกมทุกแนว รวมเกมอินดี้ที่หาข้อมูลยาก</p></div>
-      </header>
-      <div class="chat-area" id="chatArea">
-        <div class="empty-state" id="emptyState">
-          <div class="sparkle">✦</div>
-          <h2>ถามอะไรก็ได้เกี่ยวกับเกม<small>โดยเฉพาะเกมที่คนอื่นไม่ค่อยพูดถึง</small></h2>
-          <div class="suggestions">
-            <div class="suggestion" data-text="แนะนำเกมมือถือแนวเดียวกับ Free Fire ที่คนไม่ค่อยรู้จัก"><span class="icon">🧭</span> แนะนำเกมมือถือแนวเดียวกับ Free Fire ที่คนไม่ค่อยรู้จัก</div>
-            <div class="suggestion" data-text="ระบบต่อสู้ของเกม Wuthering Waves เป็นยังไง"><span class="icon">⚔️</span> ระบบต่อสู้ของเกม Wuthering Waves เป็นยังไง</div>
-            <div class="suggestion" data-text="เกมอินดี้ปี 2026 ตัวไหนน่าเล่นที่สุด"><span class="icon">🏆</span> เกมอินดี้ปี 2026 ตัวไหนน่าเล่นที่สุด</div>
-          </div>
-        </div>
-        <div class="messages" id="messages" style="display:none;"></div>
-      </div>
-      <div class="input-bar">
-        <div class="input-wrap">
-          <input id="userInput" type="text" placeholder="ถามเกี่ยวกับเกมอะไรก็ได้..." />
-          <button class="send-btn" id="sendBtn">➤</button>
-        </div>
-      </div>
-    </div>
+<div class="input-bar">
+  <div class="input-wrap">
+    <input id="userInput" type="text" placeholder="ถามเกี่ยวกับเกมอะไรก็ได้..." />
+    <button class="send-btn" id="sendBtn">➤</button>
   </div>
 </div>
 <script>
-  function showDebug(msg) {
-    let d = document.getElementById('debugBox');
-    if (!d) {
-      d = document.createElement('div');
-      d.id = 'debugBox';
-      d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;z-index:99999;font-size:12px;white-space:pre-wrap;';
-      document.body.prepend(d);
-    }
-    d.textContent += msg + '\n';
-  }
-  window.addEventListener('error', function(e) {
-    showDebug('JS Error: ' + e.message + ' (บรรทัด ' + e.lineno + ')');
-  });
-  window.addEventListener('unhandledrejection', function(e) {
-    showDebug('Promise Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
-  });
-
-  const SUPABASE_URL = "https://ppwpyiqqqdbbjkwugrcg.supabase.co";
-  const SUPABASE_ANON_KEY = "sb_publishable_rMOOeS9ZIebRTMbIgJ1RdA_9mlYzI_g";
-
-  let supabase;
-  try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  } catch (e) {
-    showDebug('สร้าง Supabase client ไม่ได้: ' + e.message);
-  }
-
-  let currentUser = null;
-  let conversations = [];
-  let activeConversationId = null;
-  let messages = [];
-  let loading = false;
-  let isSignupMode = false;
-  const authScreen = document.getElementById('authScreen');
-  const appScreen = document.getElementById('appScreen');
-  const authEmail = document.getElementById('authEmail');
-  const authPassword = document.getElementById('authPassword');
-  const authSubmitBtn = document.getElementById('authSubmitBtn');
-  const authMsg = document.getElementById('authMsg');
-  const authSub = document.getElementById('authSub');
-  const switchToSignup = document.getElementById('switchToSignup');
-  const authToggle = document.getElementById('authToggle');
-  const sidebar = document.getElementById('sidebar');
-  const menuBtn = document.getElementById('menuBtn');
-  const convList = document.getElementById('convList');
-  const searchInput = document.getElementById('searchInput');
-  const newChatBtn = document.getElementById('newChatBtn');
-  const userEmailEl = document.getElementById('userEmail');
-  const logoutBtn = document.getElementById('logoutBtn');
   const chatArea = document.getElementById('chatArea');
   const emptyState = document.getElementById('emptyState');
   const messagesEl = document.getElementById('messages');
   const userInput = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
 
-  switchToSignup.addEventListener('click', () => {
-    isSignupMode = !isSignupMode;
-    authSubmitBtn.textContent = isSignupMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ';
-    authSub.textContent = isSignupMode ? 'สร้างบัญชีใหม่เพื่อเริ่มเก็บประวัติแชท' : 'เข้าสู่ระบบเพื่อเริ่มคุยและเก็บประวัติแชท';
-    authToggle.innerHTML = isSignupMode ? 'มีบัญชีอยู่แล้ว? <a id="switchToSignup2">เข้าสู่ระบบ</a>' : 'ยังไม่มีบัญชี? <a id="switchToSignup2">สมัครสมาชิก</a>';
-    document.getElementById('switchToSignup2').addEventListener('click', () => switchToSignup.click());
-    authMsg.textContent = '';
+  let messages = [];
+  let loading = false;
+
+  document.querySelectorAll('.suggestion').forEach(el => {
+    el.addEventListener('click', () => sendMessage(el.dataset.text));
   });
-
-  authSubmitBtn.addEventListener('click', async () => {
-    const email = authEmail.value.trim();
-    const password = authPassword.value;
-    if (!email || !password) { authMsg.textContent = 'กรอกอีเมลและรหัสผ่านให้ครบ'; authMsg.className = 'auth-msg error'; return; }
-    authSubmitBtn.disabled = true;
-    authMsg.textContent = '';
-    try {
-      if (isSignupMode) {
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) { authMsg.textContent = error.message; authMsg.className = 'auth-msg error'; }
-        else { authMsg.textContent = 'สมัครสำเร็จ! ถ้าระบบเปิดยืนยันอีเมลไว้ ให้เช็คอีเมลก่อนเข้าสู่ระบบ'; authMsg.className = 'auth-msg ok'; }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) { authMsg.textContent = error.message; authMsg.className = 'auth-msg error'; }
-      }
-    } catch (e) {
-      showDebug('Auth Error: ' + e.message);
-    } finally {
-      authSubmitBtn.disabled = false;
-    }
-  });
-
-  logoutBtn.addEventListener('click', async () => { await supabase.auth.signOut(); });
-
-  supabase.auth.onAuthStateChange((_event, session) => {
-    if (session && session.user) { currentUser = session.user; showApp(); }
-    else { currentUser = null; showAuth(); }
-  });
-
-  function showAuth() { authScreen.style.display = 'flex'; appScreen.style.display = 'none'; }
-  async function showApp() {
-    authScreen.style.display = 'none';
-    appScreen.style.display = 'block';
-    userEmailEl.textContent = currentUser.email;
-    await loadConversations();
-    startNewChat();
-  }
-
-  menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
-
-  async function loadConversations() {
-    const { data, error } = await supabase.from('conversations').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
-    if (!error) { conversations = data || []; renderConvList(conversations); }
-    else { showDebug('loadConversations error: ' + error.message); }
-  }
-
-  function renderConvList(list) {
-    if (!list || list.length === 0) { convList.innerHTML = '<div class="conv-empty">ยังไม่มีประวัติแชท</div>'; return; }
-    convList.innerHTML = list.map(c => `<div class="conv-item ${c.id === activeConversationId ? 'active' : ''}" data-id="${c.id}">${escapeHtml(c.title || 'แชทใหม่')}</div>`).join('');
-    convList.querySelectorAll('.conv-item').forEach(el => { el.addEventListener('click', () => openConversation(el.dataset.id)); });
-  }
-
-  async function openConversation(id) {
-    activeConversationId = id;
-    sidebar.classList.remove('open');
-    renderConvList(conversations);
-    const { data, error } = await supabase.from('messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
-    messages = error ? [] : data.map(m => ({ role: m.role, content: m.content }));
-    renderMessages();
-  }
-
-  function startNewChat() { activeConversationId = null; messages = []; renderConvList(conversations); renderMessages(); }
-  newChatBtn.addEventListener('click', startNewChat);
-
-  let searchTimer = null;
-  searchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 300); });
-
-  async function runSearch() {
-    const q = searchInput.value.trim();
-    if (!q) { renderConvList(conversations); return; }
-    const { data: titleMatches } = await supabase.from('conversations').select('*').eq('user_id', currentUser.id).ilike('title', `%${q}%`);
-    const { data: msgMatches } = await supabase.from('messages').select('conversation_id').eq('user_id', currentUser.id).ilike('content', `%${q}%`);
-    const matchIds = new Set((titleMatches || []).map(c => c.id));
-    (msgMatches || []).forEach(m => matchIds.add(m.conversation_id));
-    const results = conversations.filter(c => matchIds.has(c.id));
-    renderConvList(results.length ? results : []);
-    if (results.length === 0) convList.innerHTML = '<div class="conv-empty">ไม่พบผลลัพธ์</div>';
-  }
-
-  document.querySelectorAll('.suggestion').forEach(el => { el.addEventListener('click', () => sendMessage(el.dataset.text)); });
   sendBtn.addEventListener('click', () => sendMessage(userInput.value));
   userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(userInput.value); });
 
   function renderMessages() {
-    if (messages.length === 0) { emptyState.style.display = 'flex'; messagesEl.style.display = 'none'; return; }
+    if (messages.length === 0) {
+      emptyState.style.display = 'flex';
+      messagesEl.style.display = 'none';
+      return;
+    }
     emptyState.style.display = 'none';
     messagesEl.style.display = 'flex';
-    messagesEl.innerHTML = messages.map(m => `<div class="msg-row ${m.role}"><div class="bubble ${m.role}">${escapeHtml(m.content)}</div></div>`).join('') + (loading ? `<div class="msg-row assistant"><div class="thinking"><div class="spinner"></div>กำลังค้นข้อมูลเกม...</div></div>` : '');
+    messagesEl.innerHTML = messages.map(m => `
+      <div class="msg-row ${m.role}"><div class="bubble ${m.role}">${escapeHtml(m.content)}</div></div>
+    `).join('') + (loading ? `
+      <div class="msg-row assistant"><div class="thinking"><div class="spinner"></div>กำลังค้นข้อมูลเกม...</div></div>
+    ` : '');
     chatArea.scrollTop = chatArea.scrollHeight;
   }
 
-  function escapeHtml(str) { const div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
-
-  async function ensureConversation(firstMessage) {
-    if (activeConversationId) return activeConversationId;
-    const title = firstMessage.slice(0, 40);
-    const { data, error } = await supabase.from('conversations').insert({ user_id: currentUser.id, title }).select().single();
-    if (error) { showDebug('ensureConversation error: ' + error.message); return null; }
-    activeConversationId = data.id;
-    conversations.unshift(data);
-    renderConvList(conversations);
-    return data.id;
-  }
-
-  async function saveMessage(conversationId, role, content) {
-    await supabase.from('messages').insert({ conversation_id: conversationId, user_id: currentUser.id, role, content });
-    await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.innerText = str;
+    return div.innerHTML;
   }
 
   async function sendMessage(text) {
     const content = text.trim();
     if (!content || loading) return;
-    const convId = await ensureConversation(content);
-    if (!convId) return;
     messages.push({ role: 'user', content });
     userInput.value = '';
     loading = true;
     renderMessages();
-    await saveMessage(convId, 'user', content);
     try {
-      const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages }) });
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages }),
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || `HTTP ${response.status}`);
       messages.push({ role: 'assistant', content: data.reply });
-      await saveMessage(convId, 'assistant', data.reply);
     } catch (err) {
       messages.push({ role: 'assistant', content: 'เกิดข้อผิดพลาด: ' + err.message });
     } finally {
       loading = false;
       renderMessages();
-      const idx = conversations.findIndex(c => c.id === convId);
-      if (idx > 0) { const [c] = conversations.splice(idx, 1); conversations.unshift(c); }
     }
   }
 </script>
