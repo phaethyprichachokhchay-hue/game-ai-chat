@@ -138,12 +138,33 @@
   </div>
 </div>
 <script>
- window.onerror = function(msg, url, line, col, err) {
-  alert('เกิดข้อผิดพลาด: ' + msg + ' (บรรทัด ' + line + ')');
-};
+  function showDebug(msg) {
+    let d = document.getElementById('debugBox');
+    if (!d) {
+      d = document.createElement('div');
+      d.id = 'debugBox';
+      d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:10px;z-index:99999;font-size:12px;white-space:pre-wrap;';
+      document.body.prepend(d);
+    }
+    d.textContent += msg + '\n';
+  }
+  window.addEventListener('error', function(e) {
+    showDebug('JS Error: ' + e.message + ' (บรรทัด ' + e.lineno + ')');
+  });
+  window.addEventListener('unhandledrejection', function(e) {
+    showDebug('Promise Error: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+
   const SUPABASE_URL = "https://ppwpyiqqqdbbjkwugrcg.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_rMOOeS9ZIebRTMbIgJ1RdA_9mlYzI_g";
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let supabase;
+  try {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  } catch (e) {
+    showDebug('สร้าง Supabase client ไม่ได้: ' + e.message);
+  }
+
   let currentUser = null;
   let conversations = [];
   let activeConversationId = null;
@@ -171,6 +192,7 @@
   const messagesEl = document.getElementById('messages');
   const userInput = document.getElementById('userInput');
   const sendBtn = document.getElementById('sendBtn');
+
   switchToSignup.addEventListener('click', () => {
     isSignupMode = !isSignupMode;
     authSubmitBtn.textContent = isSignupMode ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ';
@@ -179,28 +201,36 @@
     document.getElementById('switchToSignup2').addEventListener('click', () => switchToSignup.click());
     authMsg.textContent = '';
   });
+
   authSubmitBtn.addEventListener('click', async () => {
     const email = authEmail.value.trim();
     const password = authPassword.value;
     if (!email || !password) { authMsg.textContent = 'กรอกอีเมลและรหัสผ่านให้ครบ'; authMsg.className = 'auth-msg error'; return; }
     authSubmitBtn.disabled = true;
     authMsg.textContent = '';
-    if (isSignupMode) {
-      const { error } = await supabase.auth.signUp({ email, password });
+    try {
+      if (isSignupMode) {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) { authMsg.textContent = error.message; authMsg.className = 'auth-msg error'; }
+        else { authMsg.textContent = 'สมัครสำเร็จ! ถ้าระบบเปิดยืนยันอีเมลไว้ ให้เช็คอีเมลก่อนเข้าสู่ระบบ'; authMsg.className = 'auth-msg ok'; }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) { authMsg.textContent = error.message; authMsg.className = 'auth-msg error'; }
+      }
+    } catch (e) {
+      showDebug('Auth Error: ' + e.message);
+    } finally {
       authSubmitBtn.disabled = false;
-      if (error) { authMsg.textContent = error.message; authMsg.className = 'auth-msg error'; }
-      else { authMsg.textContent = 'สมัครสำเร็จ! ถ้าระบบเปิดยืนยันอีเมลไว้ ให้เช็คอีเมลก่อนเข้าสู่ระบบ'; authMsg.className = 'auth-msg ok'; }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      authSubmitBtn.disabled = false;
-      if (error) { authMsg.textContent = error.message; authMsg.className = 'auth-msg error'; }
     }
   });
+
   logoutBtn.addEventListener('click', async () => { await supabase.auth.signOut(); });
+
   supabase.auth.onAuthStateChange((_event, session) => {
     if (session && session.user) { currentUser = session.user; showApp(); }
     else { currentUser = null; showAuth(); }
   });
+
   function showAuth() { authScreen.style.display = 'flex'; appScreen.style.display = 'none'; }
   async function showApp() {
     authScreen.style.display = 'none';
@@ -209,16 +239,21 @@
     await loadConversations();
     startNewChat();
   }
+
   menuBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+
   async function loadConversations() {
     const { data, error } = await supabase.from('conversations').select('*').eq('user_id', currentUser.id).order('updated_at', { ascending: false });
     if (!error) { conversations = data || []; renderConvList(conversations); }
+    else { showDebug('loadConversations error: ' + error.message); }
   }
+
   function renderConvList(list) {
     if (!list || list.length === 0) { convList.innerHTML = '<div class="conv-empty">ยังไม่มีประวัติแชท</div>'; return; }
     convList.innerHTML = list.map(c => `<div class="conv-item ${c.id === activeConversationId ? 'active' : ''}" data-id="${c.id}">${escapeHtml(c.title || 'แชทใหม่')}</div>`).join('');
     convList.querySelectorAll('.conv-item').forEach(el => { el.addEventListener('click', () => openConversation(el.dataset.id)); });
   }
+
   async function openConversation(id) {
     activeConversationId = id;
     sidebar.classList.remove('open');
@@ -227,10 +262,13 @@
     messages = error ? [] : data.map(m => ({ role: m.role, content: m.content }));
     renderMessages();
   }
+
   function startNewChat() { activeConversationId = null; messages = []; renderConvList(conversations); renderMessages(); }
   newChatBtn.addEventListener('click', startNewChat);
+
   let searchTimer = null;
   searchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(runSearch, 300); });
+
   async function runSearch() {
     const q = searchInput.value.trim();
     if (!q) { renderConvList(conversations); return; }
@@ -242,9 +280,11 @@
     renderConvList(results.length ? results : []);
     if (results.length === 0) convList.innerHTML = '<div class="conv-empty">ไม่พบผลลัพธ์</div>';
   }
+
   document.querySelectorAll('.suggestion').forEach(el => { el.addEventListener('click', () => sendMessage(el.dataset.text)); });
   sendBtn.addEventListener('click', () => sendMessage(userInput.value));
   userInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') sendMessage(userInput.value); });
+
   function renderMessages() {
     if (messages.length === 0) { emptyState.style.display = 'flex'; messagesEl.style.display = 'none'; return; }
     emptyState.style.display = 'none';
@@ -252,21 +292,25 @@
     messagesEl.innerHTML = messages.map(m => `<div class="msg-row ${m.role}"><div class="bubble ${m.role}">${escapeHtml(m.content)}</div></div>`).join('') + (loading ? `<div class="msg-row assistant"><div class="thinking"><div class="spinner"></div>กำลังค้นข้อมูลเกม...</div></div>` : '');
     chatArea.scrollTop = chatArea.scrollHeight;
   }
+
   function escapeHtml(str) { const div = document.createElement('div'); div.innerText = str; return div.innerHTML; }
+
   async function ensureConversation(firstMessage) {
     if (activeConversationId) return activeConversationId;
     const title = firstMessage.slice(0, 40);
     const { data, error } = await supabase.from('conversations').insert({ user_id: currentUser.id, title }).select().single();
-    if (error) { console.error(error); return null; }
+    if (error) { showDebug('ensureConversation error: ' + error.message); return null; }
     activeConversationId = data.id;
     conversations.unshift(data);
     renderConvList(conversations);
     return data.id;
   }
+
   async function saveMessage(conversationId, role, content) {
     await supabase.from('messages').insert({ conversation_id: conversationId, user_id: currentUser.id, role, content });
     await supabase.from('conversations').update({ updated_at: new Date().toISOString() }).eq('id', conversationId);
   }
+
   async function sendMessage(text) {
     const content = text.trim();
     if (!content || loading) return;
