@@ -138,6 +138,9 @@
   </div>
 </div>
 <script>
+ window.onerror = function(msg, url, line, col, err) {
+  alert('เกิดข้อผิดพลาด: ' + msg + ' (บรรทัด ' + line + ')');
+};
   const SUPABASE_URL = "https://ppwpyiqqqdbbjkwugrcg.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_rMOOeS9ZIebRTMbIgJ1RdA_9mlYzI_g";
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
