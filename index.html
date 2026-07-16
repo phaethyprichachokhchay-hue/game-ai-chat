@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GameLore AI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0A0C16;
+    color: #E8ECFB;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+  .grid-bg {
+    position: absolute; inset: 0; opacity: 0.07;
+    background-image: linear-gradient(#00F0FF 1px, transparent 1px), linear-gradient(90deg, #00F0FF 1px, transparent 1px);
+    background-size: 42px 42px; pointer-events: none;
+  }
+  .glow-bg {
+    position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+    width: 700px; height: 700px; border-radius: 50%; opacity: 0.2; filter: blur(80px);
+    background: radial-gradient(circle, #6C3CFF 0%, transparent 70%); pointer-events: none;
+  }
+  header {
+    position: relative; z-index: 10; display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid #1B2136;
+  }
+  .logo {
+    width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; background: linear-gradient(135deg, #00F0FF, #6C3CFF);
+    box-shadow: 0 0 20px rgba(0,240,255,0.35); font-size: 20px;
+  }
+  header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+  header h1 span { color: #00F0FF; }
+  header p { font-size: 12px; color: #7C87B8; margin-top: 2px; }
+  .chat-area { position: relative; z-index: 10; flex: 1; overflow-y: auto; padding: 24px 16px; }
+  .empty-state {
+    height: 100%; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 24px; padding: 0 16px; text-align: center;
+  }
+  .empty-state .sparkle { font-size: 30px; color: #00F0FF; }
+  .empty-state h2 { font-size: 18px; font-weight: 500; }
+  .empty-state h2 small { display: block; color: #7C87B8; font-weight: 400; font-size: 13px; margin-top: 6px; }
+  .suggestions { display: grid; gap: 10px; width: 100%; max-width: 440px; }
+  .suggestion {
+    display: flex; align-items: center; gap: 10px; text-align: left; padding: 12px 16px;
+    border-radius: 16px; font-size: 14px; background: #131829; border: 1px solid #1B2136;
+    color: #C7CEEE; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease;
+  }
+  .suggestion:hover { transform: scale(1.01); border-color: #FF3EA5; }
+  .suggestion .icon { color: #FF3EA5; flex-shrink: 0; }
+  .messages { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .msg-row { display: flex; }
+  .msg-row.user { justify-content: flex-end; }
+  .msg-row.assistant { justify-content: flex-start; }
+  .bubble { max-width: 80%; padding: 10px 16px; border-radius: 18px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+  .bubble.user { background: linear-gradient(135deg, #6C3CFF, #FF3EA5); color: #fff; border-bottom-right-radius: 4px; }
+  .bubble.assistant { background: #131829; border: 1px solid #1B2136; color: #E8ECFB; border-bottom-left-radius: 4px; }
+  .thinking {
+    display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 18px;
+    font-size: 14px; background: #131829; border: 1px solid #1B2136; color: #7C87B8; width: fit-content;
+  }
+  .spinner { width: 13px; height: 13px; border: 2px solid #262D47; border-top-color: #00F0FF; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .input-bar { position: relative; z-index: 10; padding: 10px 16px 20px; }
+  .input-wrap {
+    max-width: 680px; margin: 0 auto; display: flex; align-items: center; gap: 8px;
+    background: #131829; border: 1px solid #262D47; border-radius: 999px; padding: 6px 6px 6px 18px;
+  }
+  .input-wrap input { flex: 1; background: transparent; border: none; outline: none; color: #E8ECFB; font-size: 14px; }
+  .input-wrap input::placeholder { color: #545C7E; }
+  .send-btn {
+    width: 36px; height: 36px; border-radius: 50%; border: none; display: flex; align-items: center;
+    justify-content: center; background: linear-gradient(135deg, #00F0FF, #6C3CFF); cursor: pointer;
+    flex-shrink: 0; transition: opacity 0.15s ease; font-size: 16px;
+  }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #1B2136; border-radius: 8px; }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+<div class="glow-bg"></div>
+
+<header>
+  <div class="logo">🎮</div>
+  <div>
+    <h1>GameLore <span>AI</span></h1>
+    <p>ผู้เชี่ยวชาญเกมทุกแนว รวมเกมอินดี้ที่หาข้อมูลยาก</p>
+  </div>
+</header>
+
+<div class="chat-area" id="chatArea">
+  <div class="empty-state" id="emptyState">
+    <div class="sparkle">✦</div>
+    <h2>ถามอะไรก็ได้เกี่ยวกับเกม
+      <small>โดยเฉพาะเกมที่คนอื่นไม่ค่อยพูดถึง</small>
+    </h2>
+    <div class="suggestions">
+      <div class="suggestion" data-text="แนะนำเกมมือถือแนวเดียวกับ Free Fire ที่คนไม่ค่อยรู้จัก">
+        <span class="icon">🧭</span> แนะนำเกมมือถือแนวเดียวกับ Free Fire ที่คนไม่ค่อยรู้จัก
+      </div>
+      <div class="suggestion" data-text="ระบบต่อสู้ของเกม Wuthering Waves เป็นยังไง">
+        <span class="icon">⚔️</span> ระบบต่อสู้ของเกม Wuthering Waves เป็นยังไง
+      </div>
+      <div class="suggestion" data-text="เกมอินดี้ปี 2026 ตัวไหนน่าเล่นที่สุด">
+        <span class="icon">🏆</span> เกมอินดี้ปี 2026 ตัวไหนน่าเล่นที่สุด
+      </div>
+    </div>
+  </div>
+  <div class="messages" id="messages" style="display:none;"></div>
+</div>
+
+<div class="input-bar">
+  <div class="input-wrap">
+    <input id="userInput" type="text" placeholder="ถามเกี่ยวกับเกมอะไรก็ได้..." />
+    <button class="send-btn" id="sendBtn">➤</button>
+  </div>
+</div>
+
+<script>
+  const userInput = document.getElementById('userInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const chatArea = document.getElementById('chatArea');
+  const emptyState = document.getElementById('emptyState');
+  const messagesEl = document.getElementById('messages');
+
+  let history = [];
+  let loading = false;
+
+  document.querySelectorAll('.suggestion').forEach(el => {
+    el.addEventListener('click', () => sendMessage(el.dataset.text));
+  });
+
+  sendBtn.addEventListener('click', () => sendMessage(userInput.value));
+  userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage(userInput.value);
+  });
+
+  function renderMessages() {
+    if (history.length === 0) {
+      emptyState.style.display = 'flex';
+      messagesEl.style.display = 'none';
+      return;
+    }
+    emptyState.style.display = 'none';
+    messagesEl.style.display = 'flex';
+    messagesEl.innerHTML = history.map(m => `
+      <div class="msg-row ${m.role}">
+        <div class="bubble ${m.role}">${escapeHtml(m.content)}</div>
+      </div>
+    `).join('') + (loading ? `
+      <div class="msg-row assistant">
+        <div class="thinking"><div class="spinner"></div>กำลังค้นข้อมูลเกม...</div>
+      </div>
+    ` : '');
+    chatArea.scrollTop = chatArea.scrollHeight;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.innerText = str;
+    return div.innerHTML;
+  }
+
+  async function sendMessage(text) {
+    const content = text.trim();
+    if (!content || loading) return;
+
+    history.push({ role: 'user', content });
+    userInput.value = '';
+    loading = true;
+    renderMessages();
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
+
+      history.push({ role: 'assistant', content: data.reply });
+    } catch (err) {
+      history.push({ role: 'assistant', content: 'เกิดข้อผิดพลาด: ' + err.message });
+    } finally {
+      loading = false;
+      renderMessages();
+    }
+  }
+</script>
+
+</body>
+</html>
