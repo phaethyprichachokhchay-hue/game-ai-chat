@@ -1,6 +1,5 @@
 // api/chat.js
-// Vercel serverless function — this runs on the server, never in the user's browser.
-// The Anthropic API key lives here (as an environment variable), so it's never exposed to visitors.
+// Vercel serverless function — calls Google Gemini (free tier), key stays server-side only.
 
 const SYSTEM_PROMPT = `คุณคือ "GameLore" ผู้ช่วย AI ที่เชี่ยวชาญเรื่องเกมโดยเฉพาะ ครอบคลุมทั้งเกมดังระดับโลกและ (ที่สำคัญที่สุด) เกมที่ไม่ค่อยมีคนพูดถึง เกมอินดี้ เกมท้องถิ่น เกมเฉพาะกลุ่ม และเกมเล็กๆ ที่หาข้อมูลยาก
 กติกาของคุณ:
@@ -53,42 +52,41 @@ export default async function handler(req, res) {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: 'ยังไม่ได้ตั้งค่า ANTHROPIC_API_KEY บน server' });
+    res.status(500).json({ error: 'ยังไม่ได้ตั้งค่า GEMINI_API_KEY บน server' });
     return;
   }
 
+  const geminiContents = cleanMessages.map((m) => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
-        system: SYSTEM_PROMPT,
-        messages: cleanMessages,
-      }),
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: geminiContents,
+        }),
+      }
+    );
 
     if (!response.ok) {
       const errData = await response.json().catch(() => ({}));
-      res.status(response.status).json({ error: errData?.error?.message || 'Anthropic API error' });
+      res.status(response.status).json({ error: errData?.error?.message || 'Gemini API error' });
       return;
     }
 
     const data = await response.json();
-    const text = (data.content || [])
-      .filter((b) => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n');
+    const text = data?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('\n') || '';
 
     res.status(200).json({ reply: text || 'ขอโทษด้วย ตอนนี้ตอบไม่ได้ ลองใหม่อีกครั้งนะ' });
   } catch (err) {
-    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ Anthropic API' });
+    res.status(500).json({ error: 'เกิดข้อผิดพลาดในการเชื่อมต่อกับ Gemini API' });
   }
 }
